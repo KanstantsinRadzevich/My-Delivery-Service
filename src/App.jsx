@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from './lib/supabase'
 import Login from './components/Login'
 import OrdersTable from './components/OrdersTable'
@@ -13,44 +13,108 @@ function App() {
     const [refreshKey, setRefreshKey] = useState(0)
     const [showAddForm, setShowAddForm] = useState(false)
 
-    useEffect(() => {
-        getInitialSession()
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const clearUserData = useCallback(() => {
+        setProfile(null)
+    }, [])
+
+
+
+    useEffect(() => {
+        if (session?.user) {
+            fetchUserProfile(session.user.id)
+        }
+    }, [session])
+
+    useEffect(() => {
+        // Проверяем активную сессию при загрузке
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setSession(session)
+            setLoading(false)
+        })
+
+        // Слушаем изменения сессии
+        const {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session)
         })
 
         return () => subscription.unsubscribe()
     }, [])
 
-    async function getInitialSession() {
+
+
+    const fetchUserProfile = useCallback(async (userId) => {
+        if (!userId) {
+            setProfile(null)
+            return
+        }
+        try {
+            console.log('Загрузка профиля для userId:', userId)
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', userId)
+                .single()
+                .maybeSingle() // проверка на наличие профиля
+
+            if (error) throw error
+            console.log('Профиль загружен:', data)
+            setProfile(data)
+        } catch (error) {
+            console.error('Ошибка загрузки профиля:', error)
+            setProfile(null)  // Важно: очищаем профиль при ошибке
+        }
+    }, [])
+
+    const getInitialSession = useCallback(async () => {
         try {
             const { data: { session } } = await supabase.auth.getSession()
+            console.log('Начальная сессия:', session)
+
             setSession(session)
+
             if (session?.user) {
                 await fetchUserProfile(session.user.id)
+            } else {
+                setProfile(null)
             }
         } catch (error) {
             console.error('Ошибка получения сессии:', error)
         } finally {
             setLoading(false)
         }
-    }
+    }, [fetchUserProfile])
 
-    async function fetchUserProfile(userId) {
-        try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', userId)
-                .single()
+    // Следим за изменениями аутентификации
+    // useEffect(() => {
+    //     getInitialSession()
 
-            if (error) throw error
-            setProfile(data)
-        } catch (error) {
-            console.error('Ошибка загрузки профиля:', error)
-        }
-    }
+    //     const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    //         async (event, session) => {
+    //             console.log('Auth state changed:', event, session)
+
+    //             setSession(session)
+
+    //             if (event === 'SIGNED_IN' && session?.user) {
+    //                 console.log('Событие входа, загружаем свежий профиль...')
+    //                 await fetchUserProfile(session.user.id)
+    //             } else if (event === 'SIGNED_OUT') {
+    //                 // При выходе очищаем профиль
+    //                 setProfile(null)
+    //             } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+    //                 // При обновлении пользователя перезагружаем профиль
+    //                 await fetchUserProfile(session.user.id)
+    //             }
+    //         }
+    //     )
+
+    //     return () => {
+    //         subscription.unsubscribe()
+    //         clearUserData()
+    //     }
+    // }, [getInitialSession, fetchUserProfile, clearUserData])
 
     const handleOrderAdded = () => {
         setRefreshKey(prev => prev + 1)
@@ -62,25 +126,12 @@ function App() {
     }
 
     const handleLogout = async () => {
-        await supabase.auth.signOut()
+        console.log('Выход из аккаунта...')
+        setProfile(null)
+        const response = await supabase.auth.signOut()
+        console.log('Выход выполнен:', response)
         setSession(null)
         setProfile(null)
-    }
-
-    const getUserDisplayName = () => {
-        if (profile?.full_name) return profile.full_name
-        if (session?.user?.email) {
-            // Берем часть email до @
-            const emailName = session.user.email.split('@')[0]
-            return emailName.charAt(0).toUpperCase() + emailName.slice(1)
-        }
-        return 'Пользователь'
-    }
-
-    const getUserRole = () => {
-        if (profile?.role === 'manager') return 'Менеджер'
-        if (profile?.role === 'courier') return 'Курьер'
-        return ''
     }
 
     if (loading) {
@@ -93,6 +144,7 @@ function App() {
     }
 
     if (!session) {
+        console.log('Пользователь не авторизован')
         return <Login onLogin={handleLogin} />
     }
 
@@ -117,7 +169,7 @@ function App() {
                         onClick={() => setShowAddForm(!showAddForm)}
                         style={styles.addButton}
                     >
-                        {showAddForm ? '✕ Закрыть' : '➕ Создать новый заказ'}
+                        {showAddForm ? '✕ Закрыть' : '➕ Создать новый заказ на доставку'}
                     </button>
                 </div>
 

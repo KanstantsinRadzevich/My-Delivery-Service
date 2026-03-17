@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 export default function UserMenu({ user, profile, onLogout }) {
   const [showMenu, setShowMenu] = useState(false)
 
+  console.log( profile)
   const getUserDisplayName = () => {
     if (profile?.full_name) return profile.full_name
     if (user?.email) {

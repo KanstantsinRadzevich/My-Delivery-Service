@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import OrderHistory from './OrderHistory'
 import CourierSelect from './CourierSelect'
 import CourierConfirmation from './CourierConfirmation'
+import './Button.css'
 
 export default function OrderDetails({ order, items, onUpdate }) {
     const [editing, setEditing] = useState(false)
@@ -19,10 +20,49 @@ export default function OrderDetails({ order, items, onUpdate }) {
     const [showHistory, setShowHistory] = useState(false)
     const [couriersMap, setCouriersMap] = useState({})
     const [showConfirmation, setShowConfirmation] = useState(false)
-
+    const [user, setUser] = useState(null) // Initialize user
+    const [userRole, setUserRole] = useState(null)
+  
+    
     useEffect(() => {
         loadCouriers()
     }, [])
+
+    async function loadUser() {
+        try {
+            const user = await getCurrentUser()
+            setUser(user)
+        } catch (error) {
+            console.error('Ошибка загрузки пользователя:', error)
+        }
+    }
+
+    useEffect(() => {
+        loadUser()
+    }, [])
+
+    useEffect(() => {
+        if (user) {
+            getUserRole()
+        }
+    }, [user])
+
+    async function getUserRole() {
+        try {
+            console.log("user", user.id)
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+
+            if (error) throw error
+            setUserRole(data[0].role)
+            console.log("userRole", data[0].role)
+        } catch (error) {
+            console.error('Ошибка загрузки пользователя:', error)
+        }
+    }
+
 
     async function loadCouriers() {
         try {
@@ -40,6 +80,7 @@ export default function OrderDetails({ order, items, onUpdate }) {
             console.error('Ошибка загрузки курьеров:', error)
         }
     }
+
 
     const getCourierName = (courierId) => {
         if (!courierId) return 'Не назначен'
@@ -60,11 +101,11 @@ export default function OrderDetails({ order, items, onUpdate }) {
 
 
 
-
+    
     const handleSave = async () => {
         try {
-
-            const user = await getCurrentUser()
+            
+            // const user = await getCurrentUser()
             const changes = {}
 
             // Сравниваем поля заказа
@@ -173,7 +214,7 @@ export default function OrderDetails({ order, items, onUpdate }) {
     //Поле статус доставки заполнять на русском не как в базе
     const statuses = {
         'new': 'Новый',
-        'in_delivery': 'В доставке',
+        'in_delivery': 'В работе',
         'delivered': 'Доставлен',
         'cancelled': 'Отменен'
     };
@@ -183,6 +224,7 @@ export default function OrderDetails({ order, items, onUpdate }) {
         'card': 'Карта'
     };
 
+    console.log("userRole", userRole)
 
 
     if (!editing) {
@@ -237,20 +279,20 @@ export default function OrderDetails({ order, items, onUpdate }) {
                                 <td style={styles.td}>{item.product_name}</td>
                                 <td style={styles.td}>{item.product_code}</td>
                                 <td style={styles.td}>{item.quantity}</td>
-                                <td style={styles.td}>{item.price} ₽</td>
-                                <td style={styles.td}>{item.quantity * item.price} ₽</td>
+                                <td style={styles.td}>{item.price} руб</td>
+                                <td style={styles.td}>{item.quantity * item.price} руб</td>
                             </tr>
                         ))}
                     </tbody>
                     <tfoot>
                         <tr>
                             <td colSpan="4" style={{ ...styles.td, textAlign: 'right', fontWeight: 'bold' }}>Сумма предоплаты:</td>
-                            <td style={{ ...styles.td, fontWeight: 'bold' }}>{order.prepaid_amount} ₽</td>
+                            <td style={{ ...styles.td, fontWeight: 'bold' }}>{order.prepaid_amount} руб</td>
 
                         </tr>
                         <tr>
-                            <td colSpan="4" style={{ ...styles.td, textAlign: 'right', fontWeight: 'bold' }}>Итого к оплате:</td>
-                            <td style={{ ...styles.td, fontWeight: 'bold' }}>{calculateTotal(items)} </td>
+                            <td colSpan="4" style={{ ...styles.td, textAlign: 'right', fontWeight: 'bold' }}>Итого с учетом предоплаты:</td>
+                            <td style={{ ...styles.td, fontWeight: 'bold' }}>{calculateTotal(items)} руб</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -263,11 +305,11 @@ export default function OrderDetails({ order, items, onUpdate }) {
             </div>
         )
     }
-
+ 
     return (
 
         <div style={styles.container}>
-            {order.status === 'in_delivery' && (
+            {order.status === 'in_delivery' && userRole === 'courier' && (
                 <button
                     onClick={() => setShowConfirmation(!showConfirmation)}
                     style={styles.confirmButton}
@@ -334,6 +376,21 @@ export default function OrderDetails({ order, items, onUpdate }) {
                             style={styles.input}
                         />
                     </div>
+
+                    <div style={styles.field}>
+                        <label>Время доставки</label>
+                        <select
+                            value={editedOrder.delivery_time_slot}
+                            onChange={(e) => setOrderData({ ...editedOrder, delivery_time_slot: e.target.value })}
+                            style={styles.input}
+                        >
+                            <option value="09:00-12:00">09:00 - 12:00</option>
+                            <option value="12:00-15:00">12:00 - 15:00</option>
+                            <option value="15:00-18:00">15:00 - 18:00</option>
+                            <option value="18:00-21:00">18:00 - 21:00</option>
+                        </select>
+                    </div>
+
                     <div style={styles.field}>
                         <label>Статус</label>
                         <select
@@ -356,7 +413,7 @@ export default function OrderDetails({ order, items, onUpdate }) {
                         />
                     </div>
                     <div style={styles.field}>
-                        <label>Сумма предоплаты</label>
+                        <label>Сумма предоплаты, руб</label>
                         <input
                             type="number"
                             value={editedOrder.prepaid_amount}
@@ -365,17 +422,18 @@ export default function OrderDetails({ order, items, onUpdate }) {
                         />
                     </div>
                 </div>
-
-                <h4 style={styles.subtitle}>Товары:</h4>
+                {/* Товары к доставке */}
+                <hr style={styles.hr} />
+                <h4 style={styles.subtitle}>Товары к доставке:</h4>
 
                 <table style={styles.itemsTable}>
-                    <thead>
-                        <tr>
+                    <thead >
+                        <tr style={styles.thead}>
                             <th style={styles.th}>Товар</th>
                             <th style={styles.th}>Код</th>
                             <th style={styles.th}>Кол-во</th>
-                            <th style={styles.th}>Цена</th>
-                            <th style={styles.th}>Сумма</th>
+                            <th style={styles.th}>Цена за единицу</th>
+                            <th style={styles.th}>Сумма, руб</th>
                             <th style={styles.th}></th>
                         </tr>
                     </thead>
@@ -417,23 +475,25 @@ export default function OrderDetails({ order, items, onUpdate }) {
                                         min="0"
                                     />
                                 </td>
-                                <td style={styles.td}>{(item.quantity * item.price).toFixed(2)} ₽</td>
+                                <td style={styles.td}>{(item.quantity * item.price).toFixed(2)}</td>
                                 <td style={styles.td}>
                                     <button onClick={() => removeItem(index)} style={styles.removeButton}>✕</button>
                                 </td>
                             </tr>
                         ))}
+                
                     </tbody>
-                    <tfoot>
+                    <tfoot style={styles.tfoot}>
                         <tr>
-                            <td colSpan="4" style={{ ...styles.td, textAlign: 'right', fontWeight: 'bold' }}>Итого:</td>
-                            <td colSpan="2" style={{ ...styles.td, fontWeight: 'bold' }}>{calculateTotal(editedItems)} ₽</td>
+                            <td colSpan="4" style={{ ...styles.td, textAlign: 'right', fontWeight: 'bold' }}>Итого с учетом предоплаты:</td>
+                            <td colSpan="2" style={{ ...styles.td, fontWeight: 'bold' }}>{calculateTotal(editedItems)} руб</td>
                         </tr>
                     </tfoot>
                 </table>
-
+                        {/* Новый товар */}
+                <hr style={styles.hr} />
                 <div style={styles.addItemForm}>
-                    <label htmlFor='product_name' style={styles.label}>Название товара:</label>
+                    <label htmlFor='product_name' style={styles.label}>Новый товар:</label>
                     <input
                         id='product_name'
                         type="text"
@@ -507,12 +567,12 @@ export default function OrderDetails({ order, items, onUpdate }) {
                 </div>
                 <div style={styles.header}>
                     <div>
-                        <button onClick={() => setShowHistory(true)} style={styles.historyButton}>
+                        <button onClick={() => setShowHistory(true)} className='btn-info' style={styles.historyButton}>
                             📋 История
                         </button>
-                        <button onClick={handleSave} style={styles.saveButton}>💾 Сохранить</button>
-                        <button onClick={() => setEditing(false)} style={styles.cancelButton}>✕ Отмена</button>
-                        <button onClick={handleDelete} style={styles.deleteButton}>🗑 Удалить</button>
+                        <button onClick={handleSave} style={styles.saveButton} className='btn-success' >💾 Сохранить</button>
+                        <button onClick={() => setEditing(false)} className='btn-cancel'  style={styles.cancelButton}>✕ Отмена</button>
+                        <button onClick={handleDelete} className='btn-danger' style={styles.deleteButton}>🗑 Удалить</button>
                     </div>
                 </div>
 
@@ -575,6 +635,13 @@ const styles = {
         borderBottom: '1px solid #eee',
         fontSize: '13px'
     },
+    tfoot : {
+        borderTop: '1px solid #ddd',
+        fontWeight: 'bold',
+        fontSize: '14px',
+        backgroundColor: '#cce0fb'
+    },
+
     notes: {
         padding: '10px',
         backgroundColor: '#fff3cd',
@@ -609,6 +676,14 @@ const styles = {
         fontSize: '12px',
         width: '100%'
     },
+    addItemForm: {
+        display: 'flex',
+        gap: '10px',
+        alignItems: 'center',
+        marginBottom: '20px',
+        padding: '10px',
+        backgroundColor: '#c3ee7e',
+    },
     textarea: {
         padding: '8px',
         border: '1px solid #ddd',
@@ -616,6 +691,11 @@ const styles = {
         fontSize: '14px',
         minHeight: '60px',
         resize: 'vertical'
+    },
+    hr: {
+        border: 'none',
+        borderTop: '1px solid #ddd',
+        marginBottom: '10px 0'
     },
     editButton: {
         padding: '8px 16px',
@@ -653,12 +733,7 @@ const styles = {
         borderRadius: '4px',
         cursor: 'pointer'
     },
-    addItemForm: {
-        display: 'flex',
-        gap: '10px',
-        alignItems: 'center',
-        marginBottom: '20px'
-    },
+    
     addButton: {
         padding: '10px 16px',
         backgroundColor: '#4caf50',

@@ -45,7 +45,7 @@ export default function OrderList() {
                 <p><strong>Покупатель:</strong> {order.customer_name}</p>
                 <p><strong>Адрес:</strong> {order.delivery_address}</p>
                 <p><strong>Телефон:</strong> {order.contact_phone}</p>
-                <p><strong>Сумма:</strong> {order.total_amount} ₽</p>
+                <p><strong>Сумма:</strong> {order.total_amount} </p>
                 <p><strong>Дата:</strong> {new Date(order.delivery_date).toLocaleDateString('ru-RU')}</p>
               </div>
             </div>

@@ -143,6 +143,7 @@ export default function OrdersTable() {
   }
 
   const filteredOrders = orders.filter(order => {
+    console.log(order.courier_id, filterCourier)
     if (!filterCourier) return true
     if (filterCourier === 'unassigned') return !order.courier_id
     return order.courier_id === filterCourier
@@ -150,7 +151,7 @@ export default function OrdersTable() {
 
   const orderStatus = {
     new: 'Новый',
-    in_delivery: 'В доставке',
+    in_delivery: 'В работе',
     delivered: 'Доставлен',
     cancelled: 'Отменен'
   }
@@ -161,7 +162,7 @@ export default function OrdersTable() {
     <div style={styles.container}>
       <h2 style={styles.title}>Активные доставки</h2>
 
-      <div style={styles.filterBar}>
+      <div style={styles.filterCourier}>
         <select
           value={filterCourier}
           onChange={(e) => setFilterCourier(e.target.value)}
@@ -192,7 +193,7 @@ export default function OrdersTable() {
           </tr>
         </thead>
         <tbody>
-          {orders.map(order => (
+          {      filteredOrders.map(order => (
             <Fragment key={order.id}>
               <tr
                 style={styles.row}
@@ -212,11 +213,6 @@ export default function OrdersTable() {
                     color: 'white'
                   }}>
                     {orderStatus[order.status] || order.status}
-                    {/* {order.delivery_confirmed_at && (
-                      <span style={styles.confirmedIcon} title="Подтверждено получателем">
-                        ✅
-                      </span>
-                    )} */}
                   </span>
                 </td>
                 <td style={styles.td}>
@@ -392,5 +388,25 @@ const styles = {
   confirmedIcon: {
   marginLeft: '5px',
   fontSize: '14px'
+},
+filterCourier: {
+  width: '100%',
+  padding: '10px',
+  border: '1px solid #ddd',
+  borderRadius: '4px',
+  fontSize: '14px',
+  backgroundColor: 'white',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'flex-end'
+},
+filterSelect: {
+  width: '15%',
+  padding: '10px',
+  border: '1px solid #ddd',
+  borderRadius: '4px',
+  fontSize: '14px',
+  backgroundColor: 'white',
+  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
 }
 }

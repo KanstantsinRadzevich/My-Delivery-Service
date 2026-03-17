@@ -26,6 +26,7 @@ export default function AddOrderForm({ onOrderAdded }) {
     })
 
     const calculateTotal = () => {
+        if (orderData.prepaid_amount > 0) return items.reduce((sum, item) => sum + (item.quantity * item.price), 0) - orderData.prepaid_amount
         return items.reduce((sum, item) => sum + (item.quantity * item.price), 0)
     }
 
@@ -174,13 +175,21 @@ export default function AddOrderForm({ onOrderAdded }) {
             ...orderData,
             [e.target.name]: e.target.value
         })
+
+        if(e.target.name === 'prepaid_amount') {
+            // setOrderData({
+            //     ...orderData,
+            //     total_amount: calculateTotal() - e.target.value
+            // })
+            calculateTotal()
+        }
     }
 
     return (
         <div style={styles.container} className="add-order-form">
             <h2 style={styles.title}>➕ Создать новый заказ</h2>
             <form onSubmit={handleSubmit} style={styles.form}>
-                <div style={styles.row}>
+                <div style={styles.row_2}>
                     <div style={styles.field}>
                         <label style={styles.label}>Покупатель *</label>
                         <input
@@ -208,7 +217,7 @@ export default function AddOrderForm({ onOrderAdded }) {
                     </div>
                 </div>
 
-                <div style={styles.field}>
+                <div style={styles.row_1}>
                     <label style={styles.label}>Адрес доставки *</label>
                     <input
                         type="text"
@@ -221,7 +230,7 @@ export default function AddOrderForm({ onOrderAdded }) {
                     />
                 </div>
 
-                <div style={styles.row}>
+                <div style={styles.row_3}>
                     <div style={styles.field}>
                         <label style={styles.label}>Дата доставки *</label>
                         <input
@@ -248,8 +257,16 @@ export default function AddOrderForm({ onOrderAdded }) {
                             <option value="18:00-21:00">18:00 - 21:00</option>
                         </select>
                     </div>
+                    <div style={styles.field}>
+                        <label style={styles.label}>Курьер</label>
+                        <CourierSelect
+                            value={orderData.courier_id}
+                            onChange={(value) => setOrderData({ ...orderData, courier_id: value })}
+                        />
+                    </div>
                 </div>
-                <div style={styles.row}>
+                <hr style={styles.separator} />
+                <div style={styles.row_3}>
                     <div style={styles.field}>
                         <label style={styles.label}>Способ оплаты</label>
                         <select
@@ -265,7 +282,7 @@ export default function AddOrderForm({ onOrderAdded }) {
                     </div>
 
                     <div style={styles.field}>
-                        <label style={styles.label}>Предоплата (₽)</label>
+                        <label style={styles.label}>Предоплата руб</label>
                         <input
                             type="number"
                             name="prepaid_amount"
@@ -275,15 +292,10 @@ export default function AddOrderForm({ onOrderAdded }) {
                             min="0"
                             step="0.01"
                             placeholder="0.00"
+                            
                         />
                     </div>
-                    <div style={styles.field}>
-                        <label style={styles.label}>Курьер</label>
-                        <CourierSelect
-                            value={orderData.courier_id}
-                            onChange={(value) => setOrderData({ ...orderData, courier_id: value })}
-                        />
-                    </div>
+                    
                 </div>
 
                 <h4 style={styles.subtitle}>Товары в заказе:</h4>
@@ -306,8 +318,8 @@ export default function AddOrderForm({ onOrderAdded }) {
                                     <td style={styles.td}>{item.product_name}</td>
                                     <td style={styles.td}>{item.product_code}</td>
                                     <td style={styles.td}>{item.quantity}</td>
-                                    <td style={styles.td}>{item.price} ₽</td>
-                                    <td style={styles.td}>{(item.quantity * item.price).toFixed(2)} ₽</td>
+                                    <td style={styles.td}>{item.price} руб</td>
+                                    <td style={styles.td}>{(item.quantity * item.price).toFixed(2)} руб</td>
                                     <td style={styles.td}>
                                         <button type="button" onClick={() => removeItem(index)} style={styles.removeButton}>✕</button>
                                     </td>
@@ -316,15 +328,16 @@ export default function AddOrderForm({ onOrderAdded }) {
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td colSpan="4" style={{ ...styles.td, textAlign: 'right', fontWeight: 'bold' }}>Итого:</td>
-                                <td colSpan="2" style={{ ...styles.td, fontWeight: 'bold' }}>{calculateTotal()} ₽</td>
+                                <td colSpan="4" style={{ ...styles.td, textAlign: 'right', fontWeight: 'bold' }}>Итого с учетом предоплаты:</td>
+                                <td colSpan="2" style={{ ...styles.td, fontWeight: 'bold' }}>{calculateTotal()} руб</td>
                             </tr>
                         </tfoot>
                     </table>
                 )}
-
+                <hr style={styles.separator} />
+                {/* Новый товар */}
                 <div style={styles.addItemForm}>
-                    <label htmlFor="product_name" style={styles.label}>Название товара:</label>
+                    <label htmlFor="product_name" style={styles.label}>Новый товар:</label>
                     <input
                         id='product_name'
                         type="text"
@@ -399,6 +412,17 @@ export default function AddOrderForm({ onOrderAdded }) {
 }
 
 const styles = {
+    separator: {
+        border: 'none',
+        borderTop: '1px solid #ddd',
+        margin: '10px 0'
+    },
+    tfoot : {
+        borderTop: '1px solid #ddd',
+        fontWeight: 'bold',
+        fontSize: '14px',
+        backgroundColor: '#cce0fb'
+    },
     container: {
         backgroundColor: 'white',
         padding: '24px',
@@ -416,10 +440,23 @@ const styles = {
         flexDirection: 'column',
         gap: '15px'
     },
-    row: {
+    row_1: {
+        display: 'grid',
+        gridTemplateColumns: '1fr',
+        gap: '15px',
+        marginBottom: '15px'
+    },
+    row_2: {
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
-        gap: '15px'
+        gap: '15px',
+        marginBottom: '15px'
+    },
+    row_3: {
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr 1fr',
+        gap: '15px',
+        marginBottom: '15px'
     },
     field: {
         display: 'flex',

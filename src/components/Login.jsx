@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 export default function Login({ onLogin }) {
-  const [email, setEmail] = useState('manager@test.com')
-  const [password, setPassword] = useState('password123')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -46,7 +46,7 @@ export default function Login({ onLogin }) {
     <div style={styles.container}>
       <div style={styles.card}>
         <h2 style={styles.title}>Вход в систему</h2>
-        <p style={styles.subtitle}>Менеджер</p>
+        <p style={styles.subtitle}>Своя доставка</p>
         
         {error && (
           <div style={styles.error}>
@@ -64,6 +64,7 @@ export default function Login({ onLogin }) {
               onChange={(e) => setEmail(e.target.value)}
               required
               style={styles.input}
+              autoComplete="email"
             />
           </div>
           
@@ -76,6 +77,7 @@ export default function Login({ onLogin }) {
               onChange={(e) => setPassword(e.target.value)}
               required
               style={styles.input}
+              autoComplete="current-password"
             />
           </div>
           
@@ -91,7 +93,7 @@ export default function Login({ onLogin }) {
         <div style={styles.demo}>
           <p style={styles.demoText}>Демо-доступ:</p>
           <p style={styles.demoCredentials}>Email: manager@test.com</p>
-          <p style={styles.demoCredentials}>Пароль: password123</p>
+          <p style={styles.demoCredentials}>Пароль: 123</p>
         </div>
       </div>
     </div>
